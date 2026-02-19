@@ -7,7 +7,7 @@ import os
 import pytest
 import pytest_asyncio
 
-import integration.healthie2 as healthie
+import integration.healthie as healthie
 from tests.conftest import _ensure_credentials
 
 LIVE_PATIENT_NAME = "Noel Nathan Planell Bosch"
