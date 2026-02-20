@@ -254,7 +254,7 @@ async def find_patient(name: str, date_of_birth: str) -> dict | None:
         return None
 
     user_data = {
-        "user_unique_id": user_unique_id,
+        "patient_id": user_unique_id,
         "name": name,
         "email": email,
         "phone_number": phone_number,

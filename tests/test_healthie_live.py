@@ -10,7 +10,7 @@ import pytest_asyncio
 import integration.healthie as healthie
 from tests.conftest import _ensure_credentials
 
-LIVE_PATIENT_NAME = "Noel Nathan"
+LIVE_PATIENT_NAME = "Noel Nathan Planell Bosch"
 LIVE_PATIENT_DOB = "Aug 28, 2003"
 LIVE_PATIENT_EMAIL = "noelchorradas@gmail.com"
 LIVE_PATIENT_PHONE = "611543543"

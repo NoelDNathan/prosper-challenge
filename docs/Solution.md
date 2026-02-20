@@ -12,6 +12,8 @@
   - [Live Healthie Tests](#live-healthie-tests)
   - [5.Potential Improvements](#5potential-improvements)
 - [6. Future Considerations](#6-future-considerations)
+- [7. Example Conversation](#7-example-conversation)
+  - [Conclusion](#conclusion)
 
 #  Project Structure (summary)
 
@@ -117,3 +119,73 @@ While unit tests could be added with mocks, they risk passing even when the real
 - **State Cleanup Between Tests**: Implement routines to reset user state or appointment data between test runs. This prevents live tests from failing due to leftover state (e.g., duplicate appointments).
 
 - **Analytics and Monitoring**: Collect metrics on usage patterns, error rates, and response times. This information can guide improvements in reliability, latency, and user experience.
+
+# 7. Example Conversation
+
+**Assistant [23:04:16]**  
+Hello! I’m your digital assistant from Prosper Health Clinic. To help you with your appointment or any health-related questions, could you please provide your full name and date of birth? This will allow me to look up your record in our Healthie system. Thank you!
+
+**User [23:04:34]**  
+My name is Noel Nathan. planeja
+
+**Assistant [23:04:41]**  
+Thank you, Noel! To make sure I find the correct record in Healthie, could you please provide your full date of birth as well?
+
+**User [23:04:42]**  
+My last name has a double L at the end.
+
+**Assistant [23:04:46]**  
+Thank you for clarifying! To make sure I have your details correct, could you please confirm your full name and also provide your date of birth? This will help me find your record accurately in Healthie.
+
+**User [23:04:47]**  
+So what's my name? Can you answer?
+
+**Assistant [23:05:05]**  
+Yes, I can answer! Based on what you’ve shared, your full name is Noel Nathan Planell. Could you please confirm if this is correct? Also, could you provide your date of birth so I can look up your record in Healthie? Thank you!
+
+**User [23:05:15]**  
+Yes. This is correct. And additionally, I have an additional last name, which is "Bosque," which is the name of the restaurant.
+
+**Assistant [23:05:30]**  
+Thank you for letting me know! So your full name is Noel Nathan Planell Bosque, correct? To help me find your record in Healthie, could you also provide your date of birth?
+
+**User [23:05:43]**  
+No, my name is not correct. The last -- both busk, shoe, and with a C. 8.
+
+**Assistant [23:05:54]**  
+Thank you for clarifying! It sounds like there might have been a misunderstanding about the spelling of your last name. Could you please type your full name exactly as it appears officially, along with your date of birth? That way, I can accurately look up your record in Healthie.
+
+**User [23:06:04]**  
+Yes, it should be C. And H. Can you confirm what you understood
+
+**Assistant [23:06:09]**  
+Thank you for clarifying! Could you please confirm the full spelling of your last name for me? That way, I can make sure I have your name exactly right before looking up your record in Healthie. Also, could you provide your date of birth? This will help me find your information quickly and accurately. Thank you for your patience!  
+
+Here’s what I’ve understood so far:  
+- Your full name is Noel Nathan Planell Bosch.  
+- The last name "Bosch" is spelled with a "C" and an "H" at the end.  
+
+Is this correct? If so, could you please also provide your date of birth so I can look up your record in Healthie?
+
+**User [23:06:28]**  
+Yes, you are right. My birthday is-- is August 28, 2003.
+
+**Assistant [23:07:35]**  
+Thank you, Noel Nathan Planell Bosch, and Happy (early or belated) Birthday for August 28, 2003! I’ve found your record in Healthie. To book your appointment, could you please let me know the date and time you’d prefer?
+
+**User [23:07:54]**  
+I would prefer an appointment on March 25, 2026.
+
+**Assistant [23:08:09]**  
+Great, thank you! What time on March 25, 2026 would you like your appointment? If you have a specific time in mind (morning or afternoon, or even an exact hour), just let me know!
+
+**User [23:08:24]**  
+11:00 AM.
+
+**Assistant [23:08:30]**  
+Your appointment is scheduled for March 25, 2026, at 11:00 AM. It will be an Initial Consultation (60 minutes) via video call. You’ll join using this link: https://secure.gethealthie.com//appointments/744774123/video_chat  
+
+If you have any other preferences or questions, just let me know!
+
+## Conclusion
+There are still many aspects to refine to make the conversation smoother. I’m not sure if it’s my pronunciation or the fact that the names are in Spanish, but I didn’t always fully understand them. It’s also true that sometimes it thinks I’m speaking when I’m not, and the conversation gets cut off.
