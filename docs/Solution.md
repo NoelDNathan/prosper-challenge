@@ -4,6 +4,9 @@ Me funciona el leer un usuario pero al dia siguiente añadieron el doble factor 
 
 Entonces leyendo el gmail daba problemas porque había un color que era #999999, el css daba problema.
 
+explicar porque he usado "Funciones directas", en vez de FunctionSchema en el pipeline:
+básicamente porque si hay cambios con la función directa no tengo que estar haciendo cambios en los dos sitios
+
 
 ### Live Healthie Tests
 

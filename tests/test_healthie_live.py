@@ -20,6 +20,9 @@ LIVE_LAST_SYNC = "Sync Not Set Up"
 LIVE_CLIENT_SINCE = "Feb 18, 2026"
 
 
+LIVE_PATIENT_ID = "13632834"
+
+
 @pytest_asyncio.fixture(scope="function")
 async def authenticated_healthie_session():
     """Authenticate the Healthie session."""
@@ -49,9 +52,43 @@ async def test_find_patient_live_returns_expected(authenticated_healthie_session
     assert patient["client_since"] == LIVE_CLIENT_SINCE
 
 
-# @pytest.mark.asyncio
-# @pytest.mark.live
-# async def test_find_patient_live_handles_missing(authenticated_healthie_session):
-#     """Ensure that searching for a nonexistent patient returns None."""
-#     missing_patient = await healthie.find_patient("No Such Patient 99999", "1900-01-01")
-#     assert missing_patient is None
+@pytest.mark.asyncio
+@pytest.mark.live
+async def test_find_patient_live_handles_missing(authenticated_healthie_session):
+    """Ensure that searching for a nonexistent patient returns None."""
+    missing_patient = await healthie.find_patient("No Such Patient 99999", "1900-01-01")
+    assert missing_patient is None
+
+@pytest.mark.asyncio
+@pytest.mark.live
+async def test_create_appointment_success(authenticated_healthie_session):
+    """Validate that create_appointment() returns the expected fields for a known client."""
+    appointment = await healthie.create_appointment(LIVE_PATIENT_ID, "2026-02-27", "12:00 PM")
+    assert appointment is not None, "Expected to create an appointment for the live Healthie patient"
+
+
+@pytest.mark.asyncio
+@pytest.mark.live
+async def test_create_appointment_another_event_scheduled_at_this_time(authenticated_healthie_session):
+    """Validate that create_appointment() returns the expected fields for a known client."""
+    appointment = await healthie.create_appointment(LIVE_PATIENT_ID, "2026-02-27", "10:00 AM")
+    assert appointment is not None, "Expected to create an appointment for the live Healthie patient"
+    appointment2 = await healthie.create_appointment(LIVE_PATIENT_ID, "2026-02-27", "10:00 AM")
+    assert appointment2 is  None, "Other event scheduled at this time"
+
+
+
+@pytest.mark.asyncio
+@pytest.mark.live
+async def test_create_appointment_invalid_date_format(authenticated_healthie_session):
+    """Validate that create_appointment() returns the expected fields for a known client."""
+    appointment = await healthie.create_appointment(LIVE_PATIENT_ID, "02-20-2026", "10:00 AM")
+    assert appointment is  None, "Invalid date format"
+
+
+@pytest.mark.asyncio
+@pytest.mark.live
+async def test_create_appointment_invalid_date_is_in_the_past(authenticated_healthie_session):
+    """Validate that create_appointment() returns the expected fields for a known client."""
+    appointment = await healthie.create_appointment(LIVE_PATIENT_ID, "2026-02-19", "10:00 AM")
+    assert appointment is  None, "Date is in the past"

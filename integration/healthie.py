@@ -5,24 +5,31 @@ and appointment scheduling.
 """
 
 import os
+import re
 import time
 from playwright.async_api import (
     TimeoutError,
     async_playwright,
     Browser,
-    Locator,
     Page,
 )
+from loguru import logger
+from datetime import datetime
 
 from utils.get_verification_code import get_otp
 from utils.playwright_helpers import (
-    _wait_for_test_id, 
-    get_value_by_label, 
-    get_text, 
+    _wait_for_test_id,
+    get_value_by_label,
+    get_text,
     ensure_section_open,
 )
 
-from loguru import logger
+from utils.date_helpers import (
+    calculate_diff_months,
+    convert_to_datetime,
+    format_target_date,
+    format_appointment_label,
+)
 
 _browser: Browser | None = None
 _page: Page | None = None
@@ -51,7 +58,9 @@ async def login_to_healthie() -> Page:
     password = os.environ.get("HEALTHIE_PASSWORD")
 
     if not email or not password:
-        raise ValueError("HEALTHIE_EMAIL and HEALTHIE_PASSWORD must be set in environment variables")
+        raise ValueError(
+            "HEALTHIE_EMAIL and HEALTHIE_PASSWORD must be set in environment variables"
+        )
 
     if _page is not None:
         logger.info("Using existing Healthie session")
@@ -60,45 +69,43 @@ async def login_to_healthie() -> Page:
     logger.info("Logging into Healthie...")
     playwright = await async_playwright().start()
     _browser = await playwright.chromium.launch(headless=False)
-    
-    context = await _browser.new_context(viewport={"width": 1920, "height": 1080}
-)
+
+    context = await _browser.new_context(viewport={"width": 1920, "height": 1080})
     _page = await context.new_page()
     _page.set_default_navigation_timeout(DEFAULT_WAIT_TIME)
 
-    await _page.goto("https://secure.gethealthie.com/users/sign_in", wait_until="domcontentloaded")
-    
+    await _page.goto(
+        "https://secure.gethealthie.com/users/sign_in", wait_until="domcontentloaded"
+    )
+
     # Wait for the email input to be visible
-    email_input = _page.locator('input[name="identifier"], [data-test-id="input-identifier"]')
+    email_input = _page.locator(
+        'input[name="identifier"], [data-test-id="input-identifier"]'
+    )
     await email_input.wait_for(state="visible", timeout=30000)
     await email_input.fill(email)
 
     submit_button = _page.locator('button:has-text("Log In")')
     await submit_button.wait_for(state="visible", timeout=30000)
     await submit_button.click()
-    
+
     # Wait for password input
     password_input = _page.locator('input[name="password"]')
     await password_input.wait_for(state="visible", timeout=30000)
     await password_input.fill(password)
-    
+
     # Find and click the Log In button
     submit_button = _page.locator('button:has-text("Log In")')
     await submit_button.wait_for(state="visible", timeout=30000)
     await submit_button.click()
-    
+
     time.sleep(10)
     otp_code = get_otp(subject_filter="Sign-in verification code")
     logger.info(f"OTP: {otp_code}")
 
-
     for i, digit in enumerate(otp_code):
         await _page.locator(f'div[data-test-id="otc-input-{i}"] input').fill(digit)
 
-    # otc_inputs = _page.get_by_test_id("otc-box")
-    # await otc_inputs.wait_for(state="visible", timeout=30000)
-    # Wait for navigation after login
-    
     # Check if we've navigated away from the sign-in page
     current_url = _page.url
     if "sign_in" in current_url:
@@ -106,7 +113,6 @@ async def login_to_healthie() -> Page:
 
     logger.info("Successfully logged into Healthie")
     return _page
-
 
 
 async def find_patient(name: str, date_of_birth: str) -> dict | None:
@@ -133,39 +139,51 @@ async def find_patient(name: str, date_of_birth: str) -> dict | None:
     logger.info(f"Searching Healthie for {name} (DOB: {date_of_birth})")
 
     try:
+
+        # -----------------------------------------
+        # Navigate to the Clients page
+        # -----------------------------------------
         clients_link = page.get_by_role("link", name="Clients")
         await clients_link.wait_for(state="visible", timeout=MAX_WAIT_TIME)
         await clients_link.click()
 
+        # -----------------------------------------
+        # Search for the patient
+        # -----------------------------------------
         search_input = await _wait_for_test_id(page, "search-input")
         await search_input.fill(name)
         await search_input.press("Enter")
         await page.wait_for_timeout(3000)
-        
 
+        # -----------------------------------------
+        # Patient found or return None if not found
+        # -----------------------------------------
         no_results_text = page.get_by_text("No results match your search", exact=False)
         try:
             await no_results_text.wait_for(state="visible", timeout=2000)
-            logger.info("No results message displayed for %s", name)
+            logger.info(f"No results message displayed for {name}")
             return None
         except TimeoutError:
             pass
 
+        # -----------------------------------------
+        # Table of patients found
+        # -----------------------------------------
         results_container = page.locator("#quick-profile-user-list-target")
         try:
-            await results_container.wait_for(state="visible", timeout=MAX_WAIT_TIME)
+            await results_container.wait_for(state="visible")
             await results_container.locator("table").wait_for(
                 state="visible", timeout=MAX_WAIT_TIME
             )
         except TimeoutError:
-            html = await page.inner_html()
             logger.warning(
-                "Results container did not become visible for %s. Assuming no matches.",
-                name,
+                f"Results container did not become visible for {name}. Assuming no matches.",
             )
-            logger.debug("Page snippet:\n%s", html[:1000])
             return None
 
+        # -----------------------------------------
+        # Get the number of users found
+        # -----------------------------------------
         user_rows = results_container.get_by_test_id("user-row")
         num_user_rows = await user_rows.count()
         logger.info(f"User rows found for {name}: {num_user_rows}")
@@ -179,6 +197,9 @@ async def find_patient(name: str, date_of_birth: str) -> dict | None:
                 f"Multiple ({num_user_rows}) patients found for {name}; using the first result"
             )
 
+        # -----------------------------------------
+        # Click on the first user row
+        # -----------------------------------------
         first_user_row = user_rows.nth(0)
         await first_user_row.wait_for(state="visible", timeout=MAX_WAIT_TIME)
 
@@ -187,11 +208,18 @@ async def find_patient(name: str, date_of_birth: str) -> dict | None:
         await first_user_link.click()
         await page.wait_for_timeout(1500)
 
+        # -----------------------------------------
+        # Open the basic information section
+        # -----------------------------------------
         section = page.get_by_test_id("cp-section-basic-information")
         await ensure_section_open(section)
 
         basic_info = page.get_by_test_id("client-basic-info")
-        await basic_info.wait_for(state="visible", timeout=MAX_WAIT_TIME)
+        await basic_info.wait_for(state="visible")
+
+        # -----------------------------------------
+        # Extract the basic information
+        # -----------------------------------------
 
         user_unique_id = await get_text(basic_info, "unique-client-id")
         client_since = await get_text(basic_info, "client-since")
@@ -224,17 +252,19 @@ async def find_patient(name: str, date_of_birth: str) -> dict | None:
     }
 
     logger.info(f"Returning data for client {name} (ID {user_unique_id})")
+    logger.info(user_data)
     return user_data
-    
-  
 
-async def create_appointment(patient_id: str, date: str, time: str) -> dict | None:
+
+async def create_appointment(
+    patient_id: str, date_str: str, time_str: str
+) -> dict | None:
     """Create an appointment in Healthie for the specified patient.
 
     Args:
         patient_id: The unique identifier for the patient in Healthie.
-        date: The desired appointment date in a format that Healthie accepts.
-        time: The desired appointment time in a format that Healthie accepts.
+        date: /MM/DD/YYYY  The desired appointment date in a format that Healthie accepts.
+        time: HH:MM AM/PM The desired appointment time in a format that Healthie accepts.
 
     Returns:
         dict | None: A dictionary containing appointment information if created
@@ -250,7 +280,7 @@ async def create_appointment(patient_id: str, date: str, time: str) -> dict | No
             ...
         }
     """
-    # TODO: Implement appointment creation functionality using Playwright
+
     # 1. Ensure you're logged in by calling login_to_healthie()
     # 2. Navigate to the appointment creation page for the patient
     # 3. Fill in the date and time fields
@@ -258,4 +288,147 @@ async def create_appointment(patient_id: str, date: str, time: str) -> dict | No
     # 5. Verify the appointment was created successfully
     # 6. Return appointment information
     # 7. Handle errors (e.g., time slot unavailable, invalid date/time)
-    pass
+
+    _page = await login_to_healthie()
+
+    try:
+        # -----------------------------------------
+        # Search for the patient profile
+        # -----------------------------------------
+        search_input = await _wait_for_test_id(_page, "header-client-search-form")
+        await search_input.fill(patient_id)
+        await search_input.press("Enter")
+        await _page.wait_for_timeout(3000)
+
+        view_profile = await _wait_for_test_id(_page, "view-profile")
+        await view_profile.wait_for(state="visible")
+        await view_profile.click()
+
+        # -----------------------------------------
+        # Open the Create Appointment
+        # -----------------------------------------
+        add_appointment_button = await _wait_for_test_id(
+            _page, "add-appointment-button"
+        )
+        await add_appointment_button.wait_for(state="visible")
+        await add_appointment_button.click()
+
+        appointment_modal = _page.locator(
+            "div._asideModalBody_bk67x_39, div[data-test-id='appointment-modal-body']"
+        )
+        await appointment_modal.wait_for(state="visible")
+
+        # -----------------------------------------
+        # Validate if the appointment is in the past
+        # -----------------------------------------
+        await _page.locator(
+            ".appointment_type_id > .css-1wpuca6-control > .css-cjz6q7 > .css-qc71lm"
+        ).click()
+        await _page.get_by_text("Initial Consultation - 60 Minutes", exact=True).click()
+
+        # -----------------------------------------
+        # Validate if the appointment is not in the past or return None
+        # -----------------------------------------
+        now = datetime.now()
+
+        appointment_datetime = convert_to_datetime(date_str, time_str)
+
+        if appointment_datetime < now:
+            # Cannot create appointment in the past"
+            return None
+
+        # -----------------------------------------
+        # Select the appointment time
+        # -----------------------------------------
+        await _page.get_by_placeholder("Select a time").click()
+        time_picker = _page.locator(
+            "li.react-datepicker__time-list-item", has_text=time_str
+        )
+        await time_picker.wait_for(state="visible")
+        await time_picker.click()
+        await _page.wait_for_timeout(1000)
+
+        await _page.get_by_role("textbox", name="Start date*").click()
+
+        total_months = calculate_diff_months(now, appointment_datetime)
+        for _ in range(total_months):
+            await _page.get_by_test_id("next-month").click()
+
+        await _page.get_by_role(
+            "button", name=f"Choose {format_target_date(date_str, time_str)}"
+        ).click()
+
+        # -------------------------------------------------------------
+        # Verify if there is no another event scheduled at this time or return None
+        # -------------------------------------------------------------
+        flash = _page.locator("div.flash-message")
+
+        time.sleep(1)
+        flash = _page.get_by_test_id("appointment-form-modal").get_by_test_id(
+            "flash-message"
+        )
+        if await flash.is_visible():
+            intent = await flash.inner_text()
+            logger.info(f"Intent: {str(intent)}")
+            if intent == "You have another event scheduled at this time":
+                logger.info("Another event scheduled at this time")
+                return None
+
+        # -----------------------------------------
+        # Create the appointment
+        # -----------------------------------------
+        await _page.get_by_test_id("appointment-form-modal").get_by_test_id(
+            "primaryButton"
+        ).click()
+
+        # -----------------------------------------
+        # Verify appointment was created successfully
+        # -----------------------------------------
+        # reload the appointments list
+        time.sleep(0.5)
+        await _page.get_by_test_id("tab-past").click()
+        time.sleep(0.5)
+        await _page.get_by_test_id("tab-future").click()
+        time.sleep(2)
+
+        appointments_list = _page.get_by_test_id(
+            "cop-appointments-section"
+        ).get_by_test_id("collapsible-section-body")
+        await appointments_list.wait_for(state="visible")
+
+
+        data_label = format_appointment_label(appointment_datetime)
+        appointment_found = appointments_list.get_by_text(data_label, exact=False)
+        if await appointment_found.is_visible():
+            logger.info("Appointment found at this time")
+            await appointment_found.click()
+            time.sleep(5)
+        else:
+            logger.info(f"No appointment found at this time: {data_label}")
+            return None
+
+        # -----------------------------------------
+        # Extract appointment data
+        # -----------------------------------------
+        link = _page.get_by_role("link", name="Healthie video call")
+        meeting_link = await link.get_attribute("href")
+        meeting_link = "https://secure.gethealthie.com/" + meeting_link
+        logger.info(f"Link: {meeting_link}")
+
+
+        appointment_data = {
+            "patient_phone": "phone_text",
+            "meeting_link": meeting_link,
+            "consultation_type": "Initial Consultation",
+            "consultation_duration": "60 Minutes",
+            "patient_name": "patient_name",
+            "appointment_channel": "video call",
+            "appointment_date": date_str,
+            "appointment_time": time_str,
+        }
+        logger.info(f"Created appointment data: {appointment_data}")
+        return appointment_data
+
+    except Exception as exc:
+        logger.exception(f"Failed to search for patient {patient_id}: {exc}")
+        return None
