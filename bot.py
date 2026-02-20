@@ -58,6 +58,9 @@ from pipecat.turns.user_stop.turn_analyzer_user_turn_stop_strategy import (
     TurnAnalyzerUserTurnStopStrategy,
 )
 from pipecat.turns.user_turn_strategies import UserTurnStrategies
+from pipecat.adapters.schemas.tools_schema import ToolsSchema
+
+from adapters.pipecat.healthie import find_patient_direct, create_appointment_direct
 
 logger.info("✅ All components loaded successfully!")
 
@@ -79,11 +82,14 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     messages = [
         {
             "role": "system",
-            "content": "You are a friendly AI assistant. Respond naturally and keep your answers conversational.",
+            "content": "You are a friendly AI assistant. Respond naturally and keep your answers conversational. In your first message, you are asking for the user's full name and date of birth so you can look up their record in Healthie. When you get patient response, verify the answer and if it's correct, find the patient in Healthie and ask for create an appointment, requesting the date and time.",
         },
     ]
+    llm.register_direct_function(find_patient_direct, cancel_on_interruption=False)
+    llm.register_direct_function(create_appointment_direct, cancel_on_interruption=False)
+    tools = ToolsSchema(standard_tools=[find_patient_direct, create_appointment_direct])
 
-    context = LLMContext(messages)
+    context = LLMContext(messages, tools=tools)
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
         context,
         user_params=LLMUserAggregatorParams(
@@ -121,7 +127,13 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     async def on_client_connected(transport, client):
         logger.info(f"Client connected")
         # Kick off the conversation.
-        messages.append({"role": "system", "content": "Say hello and briefly introduce yourself as a digital assistant from the Prosper Health clinic."})
+        messages.append({
+            "role": "system",
+            "content": (
+                "Greet the user and introduce yourself briefly as a digital assistant from Prosper Health Clinic. "
+                "Politely ask for the user's full name and date of birth  so you can look up their record in Healthie."
+            )
+        })        
         await task.queue_frames([LLMRunFrame()])
 
     @transport.event_handler("on_client_disconnected")
@@ -141,7 +153,7 @@ async def bot(runner_args: RunnerArguments):
         "webrtc": lambda: TransportParams(
             audio_in_enabled=True,
             audio_out_enabled=True,
-            vad_analyzer=SileroVADAnalyzer(params=VADParams(stop_secs=0.2)),
+            vad_analyzer=SileroVADAnalyzer(params=VADParams(stop_secs=0.4)),
         ),
     }
 

@@ -31,6 +31,7 @@ from utils.date_helpers import (
     format_appointment_label,
 )
 
+import asyncio 
 _browser: Browser | None = None
 _page: Page | None = None
 
@@ -98,8 +99,19 @@ async def login_to_healthie() -> Page:
     submit_button = _page.locator('button:has-text("Log In")')
     await submit_button.wait_for(state="visible", timeout=30000)
     await submit_button.click()
+   
+    continue_button = _page.locator("[data-test-id=\"passkeys-continue-to-app\"]")
+    await continue_button.wait_for(state="visible", timeout=3000)
+    if await continue_button.is_visible():
+        await continue_button.click()
+        return _page
 
-    time.sleep(10)
+
+    # -----------------------------------------------------------
+    # If the continue button is not visible, we need to enter the OTP code
+    # -----------------------------------------------------------
+    
+    await asyncio.sleep(10)
     otp_code = get_otp(subject_filter="Sign-in verification code")
     logger.info(f"OTP: {otp_code}")
 
@@ -132,7 +144,12 @@ async def find_patient(name: str, date_of_birth: str) -> dict | None:
             "patient_id": "12345",
             "name": "John Doe",
             "date_of_birth": "1990-01-15",
-            ...
+            "phone_number": "1234567890",
+            "group": "Group 1",
+            "timezone": "America/New_York",
+            "location": "New York, NY",
+            "last fitbit sync": "2026-01-01",
+            "client_since": "2026-01-01",
         }
     """
     page = await login_to_healthie()
@@ -363,7 +380,7 @@ async def create_appointment(
         # -------------------------------------------------------------
         flash = _page.locator("div.flash-message")
 
-        time.sleep(1)
+        await asyncio.sleep(1)
         flash = _page.get_by_test_id("appointment-form-modal").get_by_test_id(
             "flash-message"
         )
@@ -385,11 +402,11 @@ async def create_appointment(
         # Verify appointment was created successfully
         # -----------------------------------------
         # reload the appointments list
-        time.sleep(0.5)
+        await asyncio.sleep(0.5)
         await _page.get_by_test_id("tab-past").click()
-        time.sleep(0.5)
+        await asyncio.sleep(0.5)
         await _page.get_by_test_id("tab-future").click()
-        time.sleep(2)
+        await asyncio.sleep(2)
 
         appointments_list = _page.get_by_test_id(
             "cop-appointments-section"
@@ -402,7 +419,7 @@ async def create_appointment(
         if await appointment_found.is_visible():
             logger.info("Appointment found at this time")
             await appointment_found.click()
-            time.sleep(5)
+            await asyncio.sleep(5)
         else:
             logger.info(f"No appointment found at this time: {data_label}")
             return None

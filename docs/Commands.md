@@ -1,4 +1,5 @@
-
+A file to save some commands I used
+****
 Build normal:
 ```
 docker build -t my-pipecat-bot .
@@ -16,12 +17,14 @@ variables de entorno:
 
 docker run --rm my-pipecat-bot python bot.py
 
-
+uv sync --python /usr/bin/python3.12
+uv run python3 bot.py
 
 uv run pytest -m live tests/test_healthie_live.py
 
 uv run python -m pytest -s -vv -m live tests/test_healthie_live.py -o log_cli=true -o log_cli_level=INFO
 
+uv run python -m pytest -s -vv -m live tests/test_healthie_live.py::test_find_patient_live_returns_expected -o log_cli=true -o log_cli_level=INFO
 
 uv run python -m pytest -s -vv -m live tests/test_healthie_live.py::test_create_appointment_success -o log_cli=true -o log_cli_level=INFO
 

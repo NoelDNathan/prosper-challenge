@@ -10,7 +10,7 @@ import pytest_asyncio
 import integration.healthie as healthie
 from tests.conftest import _ensure_credentials
 
-LIVE_PATIENT_NAME = "Noel Nathan Planell Bosch"
+LIVE_PATIENT_NAME = "Noel Nathan"
 LIVE_PATIENT_DOB = "Aug 28, 2003"
 LIVE_PATIENT_EMAIL = "noelchorradas@gmail.com"
 LIVE_PATIENT_PHONE = "611543543"
@@ -63,7 +63,7 @@ async def test_find_patient_live_handles_missing(authenticated_healthie_session)
 @pytest.mark.live
 async def test_create_appointment_success(authenticated_healthie_session):
     """Validate that create_appointment() returns the expected fields for a known client."""
-    appointment = await healthie.create_appointment(LIVE_PATIENT_ID, "2026-02-27", "12:00 PM")
+    appointment = await healthie.create_appointment(LIVE_PATIENT_ID, "2026-02-28", "12:00 PM")
     assert appointment is not None, "Expected to create an appointment for the live Healthie patient"
 
 
