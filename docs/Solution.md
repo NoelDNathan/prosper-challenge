@@ -35,23 +35,25 @@ The agent first asks the user for a name and birthdate through a dialog. Once th
 
 ```mermaid
 flowchart TD
-    A[Start] --> B[Ask Name and Birthdate]
+   A[Start] --> B[Ask Name and Birthdate]
 
-    B --> C{Is name valid and birthdate valid?}
-    C -- No --> B
-    C -- Yes --> F[Ask Appointment Date and Time]
+B --> C{Is name valid and birthdate valid?}
+C -- No --> B
+C -- Yes --> D[Call find_patient]
 
-    
-    
-    F --> G{Is date/time valid?}
-    G -- No --> F
-    G -- Yes --> H[Call create_appointment]
+D --> E{Success?}
+E -- No --> B
+E -- Yes --> F[Ask Appointment Date and Time]
 
-    H --> I{Success?}
-    I -- No --> J[Return Structured Error<br/>Clarify or Suggest Alternative]
-    I -- Yes --> K[Confirmation to User]
+F --> G{Is date/time valid?}
+G -- No --> F
+G -- Yes --> H[Call create_appointment]
 
-    K --> L[End]
+H --> I{Success?}
+I -- No --> F
+I -- Yes --> K[Confirmation to User]
+
+K --> L[End]
 ```
 
 # 3. Installation
