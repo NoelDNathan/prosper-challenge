@@ -2,25 +2,23 @@
 Test the Healthie live integration.
 """
 
-import os
-
 import pytest
 import pytest_asyncio
 
 import integration.healthie as healthie
 from tests.conftest import _ensure_credentials
 
-LIVE_PATIENT_NAME = "Noel Nathan Planell Bosch"
+LIVE_PATIENT_NAME = "Noel Nathan"
 LIVE_PATIENT_DOB = "Aug 28, 2003"
 LIVE_PATIENT_EMAIL = "noelchorradas@gmail.com"
 LIVE_PATIENT_PHONE = "611543543"
-LIVE_CLIENT_ID = "13632834"
+LIVE_CLIENT_ID = "13632871"
 LIVE_GROUP = "No Group"
 LIVE_LAST_SYNC = "Sync Not Set Up"
-LIVE_CLIENT_SINCE = "Feb 18, 2026"
+LIVE_CLIENT_SINCE = "Feb 24, 2026"
 
 
-LIVE_PATIENT_ID = "13632834"
+LIVE_PATIENT_ID = "13632871"
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -29,11 +27,7 @@ async def authenticated_healthie_session():
     _ensure_credentials()
     page = await healthie.login_to_healthie()
     yield page
-    browser = getattr(healthie, "_browser", None)
-    if browser:
-        await browser.close()
-    healthie._browser = None
-    healthie._page = None
+    await healthie.close_healthie_session()
 
 
 @pytest.mark.asyncio
@@ -63,7 +57,7 @@ async def test_find_patient_live_handles_missing(authenticated_healthie_session)
 @pytest.mark.live
 async def test_create_appointment_success(authenticated_healthie_session):
     """Validate that create_appointment() returns the expected fields for a known client."""
-    appointment = await healthie.create_appointment(LIVE_PATIENT_ID, "2026-02-28", "12:00 PM")
+    appointment = await healthie.create_appointment(LIVE_PATIENT_ID, "2026-03-28", "12:00 PM")
     assert appointment is not None, "Expected to create an appointment for the live Healthie patient"
 
 

@@ -10,7 +10,7 @@
 - [4. Healthie Integration](#4-healthie-integration)
   - [Adapters](#adapters)
   - [Live Healthie Tests](#live-healthie-tests)
-  - [5.Potential Improvements](#5potential-improvements)
+- [5.Potential Improvements](#5potential-improvements)
 - [6. Future Considerations](#6-future-considerations)
 - [7. Example Conversation](#7-example-conversation)
   - [Conclusion](#conclusion)
@@ -38,14 +38,14 @@ flowchart TD
     A[Start] --> B[Ask Name and Birthdate]
 
     B --> C{Is name valid and birthdate valid?}
-    C -- No --> A
-    C -- Yes --> F[Ask Appointment Date & Time]
+    C -- No --> B
+    C -- Yes --> F[Ask Appointment Date and Time]
 
     
     
     F --> G{Is date/time valid?}
     G -- No --> F
-    G -- Yes --> H[Call Direct Functions]
+    G -- Yes --> H[Call create_appointment]
 
     H --> I{Success?}
     I -- No --> J[Return Structured Error<br/>Clarify or Suggest Alternative]
@@ -98,7 +98,7 @@ The `live` marker ensures these tests run only when explicitly requested. They r
 
 While unit tests could be added with mocks, they risk passing even when the real UI changes. Helpers such as `utils/get_verification_code.py` are better candidates for isolated testing. In general, utility functions are the most valuable targets for unit coverage. This is why integration tests have been created for the flows that involve real interactions.
 
-## 5.Potential Improvements
+# 5.Potential Improvements
 
 - **Latency**: A hypothetical Healthie API would reduce latency (though that is outside our control). Consolidating `find_patient` and `create_appointment` into a single login sequence could eliminate redundant steps or even unify the two flows when reusability is less critical. Playwright selectors could be optimized for speed, and shorter prompts could speed up the bot conversation. A faster bot voice might also improve the perceived responsiveness.
 - **Reliability**: Add retry logic or adopt a `Result<Ok, Error>` pattern (see https://pypi.org/project/result/) so each integration function returns a structured error rather than `None`. Knowing the error type allows the bot to decide the next action (e.g., re-ask for missing fields or suggest alternative slots). Apply this pattern to `integration/healthie.py` for both `find_patient` and `create_appointment`, and propagate the richer errors through `adapters/pipecat/healthie.py` so the bot can explain issues such as occupied slots. Including a simplified real-world example in the docs would help illustrate how this flow behaves. Additionally, integrate Playwright with more robust selectors and reusable helper functions for both patient search and appointment creation flows to reduce test flakiness and improve end to end stability.

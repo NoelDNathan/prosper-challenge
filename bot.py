@@ -82,13 +82,11 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     messages = [
     {
         "role": "system",
-        "content": (
-            "You are a friendly AI assistant. Speak in a natural, warm, and concise tone. "
-            "Keep your responses short and clear. "
-            "In your first message, ask the user for their full name and date of birth to look up their record in Healthie. "
-            "After they provide it, verify the information. If the patient is found, ask if they would like to schedule an appointment. "
-            "If yes, request their preferred date and time."
-        ),
+        "content": ("You are a friendly AI assistant. Respond naturally and keep your answers conversational."
+        "In your first message, you are asking for the user's full name and date of birth so you can look up"
+        "their record in Healthie. When you get a patient response, verify the answer and if it's correct,"
+        "find the patient in Healthie and ask to create an appointment, requesting the date and time."),
+
     },
 ]
     llm.register_direct_function(find_patient_direct, cancel_on_interruption=False)

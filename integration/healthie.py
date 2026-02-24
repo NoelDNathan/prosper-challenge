@@ -8,10 +8,11 @@ import os
 import re
 import time
 from playwright.async_api import (
-    TimeoutError,
-    async_playwright,
     Browser,
     Page,
+    Playwright,
+    TimeoutError,
+    async_playwright,
 )
 from loguru import logger
 from datetime import datetime
@@ -34,6 +35,7 @@ from utils.date_helpers import (
 import asyncio 
 _browser: Browser | None = None
 _page: Page | None = None
+_playwright: Playwright | None = None
 
 DEFAULT_WAIT_TIME = 10000
 MAX_WAIT_TIME = 30_000
@@ -53,7 +55,7 @@ async def login_to_healthie() -> Page:
         ValueError: If required environment variables are missing.
         Exception: If login fails for any reason.
     """
-    global _browser, _page
+    global _browser, _page, _playwright
 
     email = os.environ.get("HEALTHIE_EMAIL")
     password = os.environ.get("HEALTHIE_PASSWORD")
@@ -63,13 +65,13 @@ async def login_to_healthie() -> Page:
             "HEALTHIE_EMAIL and HEALTHIE_PASSWORD must be set in environment variables"
         )
 
-    if _page is not None:
-        logger.info("Using existing Healthie session")
-        return _page
+    # if _page is not None:
+    #     logger.info("Using existing Healthie session")
+    #     return _page
 
     logger.info("Logging into Healthie...")
-    playwright = await async_playwright().start()
-    _browser = await playwright.chromium.launch(headless=False)
+    _playwright = await async_playwright().start()
+    _browser = await _playwright.chromium.launch(headless=False)
 
     context = await _browser.new_context(viewport={"width": 1920, "height": 1080})
     _page = await context.new_page()
@@ -449,3 +451,18 @@ async def create_appointment(
     except Exception as exc:
         logger.exception(f"Failed to search for patient {patient_id}: {exc}")
         return None
+
+
+async def close_healthie_session() -> None:
+    """Clean up any Playwright resources associated with the Healthie session."""
+    global _browser, _page, _playwright
+
+    if _browser is not None:
+        await _browser.close()
+        _browser = None
+
+    if _playwright is not None:
+        await _playwright.stop()
+        _playwright = None
+
+    _page = None
